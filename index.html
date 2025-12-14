@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>凡人修仙传 - 御空飞行</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(to bottom, #0a0e27 0%, #1a0b2e 50%, #2d1b4e 100%);
+            font-family: 'KaiTi', 'STKaiti', serif;
+            overflow: hidden;
+        }
+        #gameContainer {
+            position: relative;
+            box-shadow: 0 0 50px rgba(138, 43, 226, 0.6), 0 0 100px rgba(75, 0, 130, 0.4);
+            border-radius: 10px;
+        }
+        canvas {
+            display: block;
+            background: radial-gradient(ellipse at center, #1a0b2e 0%, #0a0527 100%);
+            border: 3px solid #9d4edd;
+            border-radius: 10px;
+        }
+        #gameInfo {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #ffd700;
+            font-size: 18px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8), 2px 2px 4px rgba(0, 0, 0, 0.8);
+            z-index: 10;
+            font-weight: bold;
+        }
+        .info-label {
+            color: #e0aaff;
+            font-size: 16px;
+        }
+        #cultivation {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #00ff88;
+            font-size: 18px;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.8);
+            z-index: 10;
+            text-align: right;
+            font-weight: bold;
+        }
+        #weaponInfo {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(157, 78, 221, 0.3);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid #9d4edd;
+            color: #ffd700;
+            font-size: 16px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+            display: none;
+            z-index: 10;
+        }
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, rgba(29, 7, 60, 0.95), rgba(10, 5, 39, 0.95));
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            color: #ffd700;
+            display: none;
+            z-index: 20;
+            border: 3px solid #9d4edd;
+            box-shadow: 0 0 30px rgba(157, 78, 221, 0.8);
+            min-width: 350px;
+        }
+        #gameOver h2 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #ff6b9d;
+            text-shadow: 0 0 20px rgba(255, 107, 157, 0.8);
+        }
+        #gameOver p {
+            font-size: 22px;
+            margin: 15px 0;
+            color: #e0aaff;
+        }
+        #gameOver .final-realm {
+            font-size: 28px;
+            color: #00ff88;
+            text-shadow: 0 0 15px rgba(0, 255, 136, 0.8);
+            margin: 20px 0;
+        }
+        #restartBtn {
+            margin-top: 25px;
+            padding: 15px 40px;
+            font-size: 20px;
+            background: linear-gradient(135deg, #9d4edd, #7b2cbf);
+            color: #fff;
+            border: 2px solid #e0aaff;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            font-family: 'KaiTi', serif;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        #restartBtn:hover {
+            background: linear-gradient(135deg, #c77dff, #9d4edd);
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(157, 78, 221, 0.8);
+        }
+        #title {
+            position: absolute;
+            top: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffd700;
+            font-size: 32px;
+            font-weight: bold;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 0 40px rgba(157, 78, 221, 0.6);
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="title">凡人修仙传 · 御空飞行</div>
+        <div id="gameInfo">
+            <div><span class="info-label">灵石:</span> <span id="score">0</span></div>
+            <div><span class="info-label">寿元:</span> <span id="lives">3</span></div>
+        </div>
+        <div id="cultivation">
+            <div><span class="info-label">境界:</span> <span id="realm">炼气期</span></div>
+        </div>
+        <div id="weaponInfo">
+            <span id="weaponName">普通灵力</span> | 
+            <span id="weaponTime">∞</span>
+        </div>
+        <canvas id="gameCanvas" width="450" height="650"></canvas>
+        <div id="gameOver">
+            <h2>道消身陨</h2>
+            <p>获得灵石: <span id="finalScore">0</span></p>
+            <p class="final-realm">最终境界: <span id="finalRealm">炼气期</span></p>
+            <button id="restartBtn">重新修炼</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const livesEl = document.getElementById('lives');
+        const realmEl = document.getElementById('realm');
+        const weaponInfoEl = document.getElementById('weaponInfo');
+        const weaponNameEl = document.getElementById('weaponName');
+        const weaponTimeEl = document.getElementById('weaponTime');
+        const gameOverEl = document.getElementById('gameOver');
+        const finalScoreEl = document.getElementById('finalScore');
+        const finalRealmEl = document.getElementById('finalRealm');
+        const restartBtn = document.getElementById('restartBtn');
+
+        let gameRunning = true;
+        let score = 0;
+        let lives = 3;
+        let animFrame = 0;
+
+        // 法宝系统
+        let currentWeapon = null;
+        let weaponDuration = 0;
+        const treasures = [];
+
+        // 法宝类型定义
+        const weaponTypes = {
+            laser: {
+                name: '天雷剑',
+                color: '#00d4ff',
+                duration: 300, // 5秒
+                icon: '⚡'
+            },
+            triple: {
+                name: '三才阵',
+                color: '#ff00ff',
+                duration: 360,
+                icon: '🔱'
+            },
+            spread: {
+                name: '八卦盘',
+                color: '#ffd700',
+                duration: 420,
+                icon: '✨'
+            },
+            rapid: {
+                name: '疾风符',
+                color: '#00ff88',
+                duration: 480,
+                icon: '💨'
+            }
+        };
+
+        // 修仙境界配置
+        const realms = [
+            { 
+                name: '炼气期', 
+                threshold: 0, 
+                robeColor: '#b8b8b8',
+                beltColor: '#808080',
+                auraColor: '#ffffff'
+            },
+            { 
+                name: '筑基期', 
+                threshold: 100, 
+                robeColor: '#4ecca3',
+                beltColor: '#2d8659',
+                auraColor: '#00ff88'
+            },
+            { 
+                name: '结丹期', 
+                threshold: 300, 
+                robeColor: '#4a90e2',
+                beltColor: '#2d5a8f',
+                auraColor: '#00d4ff'
+            },
+            { 
+                name: '元婴期', 
+                threshold: 600, 
+                robeColor: '#9b59b6',
+                beltColor: '#6c3483',
+                auraColor: '#e74cff'
+            },
+            { 
+                name: '化神期', 
+                threshold: 1000, 
+                robeColor: '#f1c40f',
+                beltColor: '#b8860b',
+                auraColor: '#ffd700'
+            },
+            { 
+                name: '炼虚期', 
+                threshold: 1500, 
+                robeColor: '#e74c3c',
+                beltColor: '#8b0000',
+                auraColor: '#ff6b6b'
+            },
+            { 
+                name: '合体期', 
+                threshold: 2000, 
+                robeColor: '#ff1493',
+                beltColor: '#c71585',
+                auraColor: '#ff69b4'
+            },
+            { 
+                name: '大乘期', 
+                threshold: 3000, 
+                robeColor: '#ff4500',
+                beltColor: '#8b2500',
+                auraColor: '#ff6347'
+            }
+        ];
+
+        let currentRealm = realms[0];
+
+        // 更新境界
+        function updateRealm() {
+            for (let i = realms.length - 1; i >= 0; i--) {
+                if (score >= realms[i].threshold) {
+                    if (currentRealm !== realms[i]) {
+                        currentRealm = realms[i];
+                        realmEl.style.color = currentRealm.auraColor;
+                        realmEl.style.textShadow = `0 0 15px ${currentRealm.auraColor}`;
+                    }
+                    realmEl.textContent = currentRealm.name;
+                    return;
+                }
+            }
+        }
+
+        // 玩家
+        const player = {
+            x: canvas.width / 2 - 20,
+            y: canvas.height - 120,
+            width: 40,
+            height: 60,
+            speed: 6
+        };
+
+        // 灵力弹
+        const bullets = [];
+        const bulletSpeed = 8;
+        let shootCooldown = 0;
+        const normalCooldown = 15;
+        const rapidCooldown = 5;
+
+        // 激光
+        const lasers = [];
+
+        // 妖兽
+        const enemies = [];
+        const enemySpeed = 2.5;
+        let enemySpawnRate = 0.018;
+
+        // 键盘控制
+        const keys = {};
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+            if (e.key === ' ' && gameRunning) {
+                shootBullet();
+            }
+        });
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        // 鼠标控制
+        canvas.addEventListener('mousemove', (e) => {
+            if (gameRunning) {
+                const rect = canvas.getBoundingClientRect();
+                player.x = e.clientX - rect.left - player.width / 2;
+            }
+        });
+        canvas.addEventListener('click', () => {
+            if (gameRunning) shootBullet();
+        });
+
+        // 生成法宝
+        function spawnTreasure() {
+            if (Math.random() < 0.003) { // 0.3% 概率
+                const types = Object.keys(weaponTypes);
+                const type = types[Math.floor(Math.random() * types.length)];
+                
+                treasures.push({
+                    x: Math.random() * (canvas.width - 30),
+                    y: -30,
+                    width: 30,
+                    height: 30,
+                    speed: 2,
+                    type: type,
+                    rotation: 0
+                });
+            }
+        }
+
+        // 绘制法宝
+        function drawTreasures() {
+            treasures.forEach(treasure => {
+                const weapon = weaponTypes[treasure.type];
+                const centerX = treasure.x + treasure.width / 2;
+                const centerY = treasure.y + treasure.height / 2;
+
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(treasure.rotation);
+
+                // 法宝光环
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = weapon.color;
+                ctx.strokeStyle = weapon.color;
+                ctx.lineWidth = 2;
+                ctx.globalAlpha = 0.6;
+                ctx.beginPath();
+                ctx.arc(0, 0, treasure.width / 2 + 5, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // 法宝主体
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = weapon.color;
+                ctx.fillRect(-treasure.width / 2, -treasure.height / 2, treasure.width, treasure.height);
+                
+                // 法宝图标
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '20px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(weapon.icon, 0, 0);
+
+                ctx.restore();
+
+                treasure.rotation += 0.05;
+            });
+        }
+
+        // 更新法宝
+        function updateTreasures() {
+            for (let i = treasures.length - 1; i >= 0; i--) {
+                treasures[i].y += treasures[i].speed;
+
+                // 检测玩家拾取
+                if (checkCollision(player, treasures[i])) {
+                    activateWeapon(treasures[i].type);
+                    treasures.splice(i, 1);
+                    continue;
+                }
+
+                // 移出屏幕
+                if (treasures[i].y > canvas.height) {
+                    treasures.splice(i, 1);
+                }
+            }
+        }
+
+        // 激活法宝
+        function activateWeapon(type) {
+            currentWeapon = type;
+            const weapon = weaponTypes[type];
+            weaponDuration = weapon.duration;
+            weaponInfoEl.style.display = 'block';
+            weaponNameEl.textContent = weapon.name;
+            weaponNameEl.style.color = weapon.color;
+        }
+
+        // 更新法宝持续时间
+        function updateWeaponDuration() {
+            if (currentWeapon && weaponDuration > 0) {
+                weaponDuration--;
+                weaponTimeEl.textContent = (weaponDuration / 60).toFixed(1) + 's';
+                
+                if (weaponDuration <= 0) {
+                    currentWeapon = null;
+                    weaponInfoEl.style.display = 'none';
+                }
+            }
+        }
+
+        // 绘制修仙者
+        function drawPlayer() {
+            const centerX = player.x + player.width / 2;
+            const centerY = player.y + player.height / 2;
+
+            // 灵气光环
+            ctx.save();
+            ctx.globalAlpha = 0.3 + Math.sin(animFrame * 0.1) * 0.1;
+            ctx.strokeStyle = currentWeapon ? weaponTypes[currentWeapon].color : currentRealm.auraColor;
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = currentWeapon ? weaponTypes[currentWeapon].color : currentRealm.auraColor;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, player.width / 2 + 8, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+
+            // 御空飞行光晕
+            ctx.save();
+            ctx.globalAlpha = 0.2;
+            ctx.fillStyle = currentWeapon ? weaponTypes[currentWeapon].color : currentRealm.auraColor;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = currentWeapon ? weaponTypes[currentWeapon].color : currentRealm.auraColor;
+            ctx.beginPath();
+            ctx.ellipse(centerX, player.y + player.height + 5, 15, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            ctx.shadowBlur = 0;
+
+            // 头部
+            ctx.fillStyle = '#ffd4a3';
+            ctx.beginPath();
+            ctx.arc(centerX, player.y + 12, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 头发
+            ctx.fillStyle = '#2c2c2c';
+            ctx.beginPath();
+            ctx.arc(centerX, player.y + 10, 9, Math.PI, Math.PI * 2);
+            ctx.fill();
+
+            // 眼睛
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(centerX - 3, player.y + 12, 1.5, 0, Math.PI * 2);
+            ctx.arc(centerX + 3, player.y + 12, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 身体（道袍）
+            ctx.fillStyle = currentRealm.robeColor;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = currentRealm.robeColor;
+            ctx.beginPath();
+            ctx.moveTo(centerX - 12, player.y + 22);
+            ctx.lineTo(centerX - 10, player.y + 50);
+            ctx.lineTo(centerX + 10, player.y + 50);
+            ctx.lineTo(centerX + 12, player.y + 22);
+            ctx.closePath();
+            ctx.fill();
+
+            // 腰带
+            ctx.fillStyle = currentRealm.beltColor;
+            ctx.fillRect(centerX - 12, player.y + 32, 24, 4);
+
+            // 道袍花纹
+            ctx.strokeStyle = currentWeapon ? weaponTypes[currentWeapon].color : currentRealm.auraColor;
+            ctx.lineWidth = 1.5;
+            ctx.globalAlpha = 0.6;
+            ctx.beginPath();
+            ctx.moveTo(centerX - 8, player.y + 25);
+            ctx.lineTo(centerX - 6, player.y + 30);
+            ctx.moveTo(centerX + 8, player.y + 25);
+            ctx.lineTo(centerX + 6, player.y + 30);
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+
+            // 手臂
+            ctx.strokeStyle = '#ffd4a3';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            
+            const leftHandOffset = Math.sin(animFrame * 0.15) * 2;
+            ctx.beginPath();
+            ctx.moveTo(centerX - 10, player.y + 24);
+            ctx.lineTo(centerX - 15, player.y + 20 + leftHandOffset);
+            ctx.stroke();
+
+            const rightHandOffset = Math.sin(animFrame * 0.15 + Math.PI) * 2;
+            ctx.beginPath();
+            ctx.moveTo(centerX + 10, player.y + 24);
+            ctx.lineTo(centerX + 15, player.y + 20 + rightHandOffset);
+            ctx.stroke();
+
+            // 腿部
+            ctx.strokeStyle = currentRealm.robeColor;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(centerX - 5, player.y + 50);
+            ctx.lineTo(centerX - 6, player.y + 58);
+            ctx.moveTo(centerX + 5, player.y + 50);
+            ctx.lineTo(centerX + 6, player.y + 58);
+            ctx.stroke();
+
+            // 灵力尾迹
+            ctx.save();
+            ctx.fillStyle = currentWeapon ? weaponTypes[currentWeapon].color : currentRealm.auraColor;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = currentWeapon ? weaponTypes[currentWeapon].color : currentRealm.auraColor;
+            for (let i = 0; i < 3; i++) {
+                ctx.globalAlpha = 0.3 - i * 0.1;
+                ctx.beginPath();
+                ctx.arc(centerX - 3 + i * 2, player.y + player.height + 8 + i * 5, 3 - i * 0.5, 0, Math.PI * 2);
+                ctx.arc(centerX + 3 - i * 2, player.y + player.height + 8 + i * 5, 3 - i * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+
+            ctx.shadowBlur = 0;
+        }
+
+        // 发射灵力弹
+        function shootBullet() {
+            if (shootCooldown > 0) return;
+
+            const centerX = player.x + player.width / 2;
+
+            if (currentWeapon === 'laser') {
+                // 激光
+                lasers.push({
+                    x: centerX - 3,
+                    y: player.y,
+                    width: 6,
+                    height: player.y,
+                    duration: 10,
+                    color: weaponTypes.laser.color
+                });
+                shootCooldown = 30;
+            } else if (currentWeapon === 'triple') {
+                // 三连发
+                bullets.push({
+                    x: centerX - 3,
+                    y: player.y,
+                    width: 6,
+                    height: 20,
+                    vx: 0,
+                    vy: -bulletSpeed
+                });
+                bullets.push({
+                    x: centerX - 20,
+                    y: player.y,
+                    width: 6,
+                    height: 20,
+                    vx: -2,
+                    vy: -bulletSpeed
+                });
+                bullets.push({
+                    x: centerX + 14,
+                    y: player.y,
+                    width: 6,
+                    height: 20,
+                    vx: 2,
+                    vy: -bulletSpeed
+                });
+                shootCooldown = normalCooldown;
+            } else if (currentWeapon === 'spread') {
+                // 八方散射
+                for (let i = 0; i < 8; i++) {
+                    const angle = (Math.PI * 2 / 8) * i - Math.PI / 2;
+                    bullets.push({
+                        x: centerX - 3,
+                        y: player.y,
+                        width: 6,
+                        height: 15,
+                        vx: Math.cos(angle) * 5,
+                        vy: Math.sin(angle) * 8
+                    });
+                }
+                shootCooldown = 40;
+            } else if (currentWeapon === 'rapid') {
+                // 快速连发
+                bullets.push({
+                    x: centerX - 3,
+                    y: player.y,
+                    width: 6,
+                    height: 20,
+                    vx: 0,
+                    vy: -bulletSpeed
+                });
+                shootCooldown = rapidCooldown;
+            } else {
+                // 普通攻击
+                bullets.push({
+                    x: centerX - 3,
+                    y: player.y,
+                    width: 6,
+                    height: 20,
+                    vx: 0,
+                    vy: -bulletSpeed
+                });
+                shootCooldown = normalCooldown;
+            }
+        }
+
+        // 绘制激光
+        function drawLasers() {
+            lasers.forEach(laser => {
+                ctx.save();
+                ctx.shadowBlur = 30;
+                ctx.shadowColor = laser.color;
+                
+                // 激光外层光晕
+                ctx.globalAlpha = 0.3;
+                ctx.fillStyle = laser.color;
+                ctx.fillRect(laser.x - 5, 0, laser.width + 10, laser.height);
+                
+                // 激光主体
+                ctx.globalAlpha = 0.8;
+                ctx.fillStyle = laser.color;
+                ctx.fillRect(laser.x, 0, laser.width, laser.height);
+                
+                // 激光核心
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(laser.x + 1, 0, laser.width - 2, laser.height);
+                
+                ctx.restore();
+            });
+        }
+
+        // 更新激光
+        function updateLasers() {
+            for (let i = lasers.length - 1; i >= 0; i--) {
+                lasers[i].duration--;
+                if (lasers[i].duration <= 0) {
+                    lasers.splice(i, 1);
+                }
+            }
+        }
+
+        // 绘制灵力弹
+        function drawBullets() {
+            bullets.forEach(bullet => {
+                const color = currentWeapon ? weaponTypes[currentWeapon].color : currentRealm.auraColor;
+                ctx.save();
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = color;
+                
+                ctx.globalAlpha = 0.3;
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(bullet.x + bullet.width / 2, bullet.y + bullet.height / 2, bullet.width + 5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.ellipse(bullet.x + bullet.width / 2, bullet.y + bullet.height / 2, bullet.width / 2, bullet.height / 2, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.ellipse(bullet.x + bullet.width / 2, bullet.y + bullet.height / 2, bullet.width / 3, bullet.height / 3, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+            });
+        }
+
+        // 更新灵力弹
+        function updateBullets() {
+            if (shootCooldown > 0) shootCooldown--;
+
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                bullets[i].x += bullets[i].vx || 0;
+                bullets[i].y += bullets[i].vy || -bulletSpeed;
+                
+                if (bullets[i].y < -bullets[i].height || 
+                    bullets[i].x < -bullets[i].width || 
+                    bullets[i].x > canvas.width) {
+                    bullets.splice(i, 1);
+                }
+            }
+        }
+
+        // 妖兽类型
+        const monsterTypes = [
+            { name: '低阶妖兽', color: '#ff6b6b', size: 1, speed: 1 },
+            { name: '中阶妖兽', color: '#ff1493', size: 1.2, speed: 1.3 },
+            { name: '高阶妖兽', color: '#8b00ff', size: 1.5, speed: 1.6 }
+        ];
+
+        // 生成妖兽
+        function spawnEnemy() {
+            if (Math.random() < enemySpawnRate) {
+                let type = monsterTypes[0];
+                const rand = Math.random();
+                if (score > 500 && rand < 0.3) {
+                    type = monsterTypes[2];
+                } else if (score > 200 && rand < 0.5) {
+                    type = monsterTypes[1];
+                }
+
+                const baseSize = 40;
+                const size = baseSize * type.size;
+                
+                enemies.push({
+                    x: Math.random() * (canvas.width - size),
+                    y: -size,
+                    width: size,
+                    height: size,
+                    speed: (enemySpeed + Math.random() * 2) * type.speed,
+                    type: type
+                });
+            }
+        }
+
+        // 绘制妖兽
+        function drawEnemies() {
+            enemies.forEach(enemy => {
+                ctx.save();
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = enemy.type.color;
+                ctx.fillStyle = enemy.type.color;
+                
+                ctx.beginPath();
+                ctx.moveTo(enemy.x + enemy.width / 2, enemy.y + enemy.height);
+                ctx.lineTo(enemy.x, enemy.y + 10);
+                ctx.lineTo(enemy.x + enemy.width / 2, enemy.y);
+                ctx.lineTo(enemy.x + enemy.width, enemy.y + 10);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = '#00ff00';
+                ctx.globalAlpha = 0.4;
+                ctx.beginPath();
+                ctx.arc(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, enemy.width / 2 + 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+
+                ctx.fillStyle = '#ff0000';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#ff0000';
+                ctx.beginPath();
+                ctx.arc(enemy.x + enemy.width / 2 - 8, enemy.y + enemy.height / 3, 3, 0, Math.PI * 2);
+                ctx.arc(enemy.x + enemy.width / 2 + 8, enemy.y + enemy.height / 3, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            });
+        }
+
+        // 更新妖兽
+        function updateEnemies() {
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                enemies[i].y += enemies[i].speed;
+                
+                if (enemies[i].y > canvas.height) {
+                    enemies.splice(i, 1);
+                    continue;
+                }
+
+                if (checkCollision(player, enemies[i])) {
+                    enemies.splice(i, 1);
+                    lives--;
+                    livesEl.textContent = lives;
+                    if (lives <= 0) {
+                        endGame();
+                    }
+                }
+            }
+        }
+
+        // 碰撞检测
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+
+        // 检测击中
+        function checkBulletHits() {
+            // 检测激光
+            for (let i = lasers.length - 1; i >= 0; i--) {
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    if (enemies[j].x + enemies[j].width > lasers[i].x &&
+                        enemies[j].x < lasers[i].x + lasers[i].width &&
+                        enemies[j].y < lasers[i].height) {
+                        
+                        const reward = Math.floor(10 * enemies[j].type.size);
+                        enemies.splice(j, 1);
+                        score += reward;
+                        scoreEl.textContent = score;
+                        updateRealm();
+                    }
+                }
+            }
+
+            // 检测普通子弹
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    if (checkCollision(bullets[i], enemies[j])) {
+                        bullets.splice(i, 1);
+                        
+                        const reward = Math.floor(10 * enemies[j].type.size);
+                        enemies.splice(j, 1);
+                        score += reward;
+                        scoreEl.textContent = score;
+                        updateRealm();
+                        
+                        if (score % 150 === 0) {
+                            enemySpawnRate = Math.min(0.04, enemySpawnRate + 0.003);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        // 更新玩家
+        function updatePlayer() {
+            if (keys['ArrowLeft'] || keys['a']) {
+                player.x -= player.speed;
+            }
+            if (keys['ArrowRight'] || keys['d']) {
+                player.x += player.speed;
+            }
+
+            if (player.x < 0) player.x = 0;
+            if (player.x + player.width > canvas.width) {
+                player.x = canvas.width - player.width;
+            }
+        }
+
+        // 星辰背景
+        const stars = [];
+        for (let i = 0; i < 100; i++) {
+            stars.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 2.5,
+                speed: 0.5 + Math.random() * 1.5,
+                opacity: 0.3 + Math.random() * 0.7
+            });
+        }
+
+        function drawStars() {
+            stars.forEach(star => {
+                ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`;
+                ctx.shadowBlur = 3;
+                ctx.shadowColor = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                star.y += star.speed;
+                if (star.y > canvas.height) {
+                    star.y = 0;
+                    star.x = Math.random() * canvas.width;
+                }
+            });
+            ctx.shadowBlur = 0;
+        }
+
+        // 结束游戏
+        function endGame() {
+            gameRunning = false;
+            finalScoreEl.textContent = score;
+            finalRealmEl.textContent = currentRealm.name;
+            finalRealmEl.style.color = currentRealm.auraColor;
+            gameOverEl.style.display = 'block';
+        }
+
+        // 重新开始
+        restartBtn.addEventListener('click', () => {
+            gameRunning = true;
+            score = 0;
+            lives = 3;
+            bullets.length = 0;
+            enemies.length = 0;
+            treasures.length = 0;
+            lasers.length = 0;
+            currentWeapon = null;
+            weaponDuration = 0;
+            shootCooldown = 0;
+            enemySpawnRate = 0.018;
+            player.x = canvas.width / 2 - 20;
+            player.y = canvas.height - 120;
+            currentRealm = realms[0];
+            scoreEl.textContent = score;
+            livesEl.textContent = lives;
+            realmEl.textContent = currentRealm.name;
+            realmEl.style.color = currentRealm.auraColor;
+            weaponInfoEl.style.display = 'none';
+            gameOverEl.style.display = 'none';
+            animFrame = 0;
+            gameLoop();
+        });
+
+        // 游戏主循环
+        function gameLoop() {
+            if (!gameRunning) return;
+
+            animFrame++;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            drawStars();
+            updatePlayer();
+            drawPlayer();
+            updateBullets();
+            drawBullets();
+            updateLasers();
+            drawLasers();
+            spawnEnemy();
+            updateEnemies();
+            drawEnemies();
+            spawnTreasure();
+            updateTreasures();
+            drawTreasures();
+            checkBulletHits();
+            updateWeaponDuration();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
